@@ -1,5 +1,5 @@
 # solar-battery-optimizer
-Python LP Optimizer for solar power plant and battery dimensioning utilizing PuLP solver.
+Python LP Optimizer for solar power plant and battery dimensioning utilizing PuLP solver. Currently program is very experimental stage and will most likely require at least basic undestanding of python to be usable.
 
 Program will output cumulative cost and savings information in .png file. Program will also give hour-by-hour solar to battery, solar to immediate use, solar to grid, battery charging and discharging in optimized_decisions variable although it's not extracted to be visible.
 
