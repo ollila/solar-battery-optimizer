@@ -1,7 +1,7 @@
 # solar-battery-optimizer
 Python LP Optimizer for solar power plant and battery dimensioning utilizing PuLP solver.
 
-Program will output cumulative cost and savings information in .png file
+Program will output cumulative cost and savings information in .png file. Program will also give hour-by-hour charging and discharging amounts for battery in optimized_decisions although it's not extracted currently.
 
 **Inputs**
 
