@@ -4,11 +4,11 @@ from datetime import datetime, timedelta, timezone
 import xml.etree.ElementTree as ET
 import configparser
 
-# Read API key from .secrets file
 # create .secrets file and add following lines to it
 # [entsoe]
 # API_KEY = your_api_key
 
+# Read API key from .secrets file
 config = configparser.ConfigParser()
 config.read('.secrets')
 API_KEY = config['entsoe']['api_key']
