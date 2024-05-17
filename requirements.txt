@@ -1,0 +1,10 @@
+# install with command:
+# pip install -r requirements.txt
+
+GitPython==3.1.41
+matplotlib==3.8.2
+pandas
+pip
+pulp
+configparser
+lxml
