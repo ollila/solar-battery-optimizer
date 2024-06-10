@@ -1,5 +1,6 @@
-venv/
-dev/
 consumption*
 .secrets.txt
 __pycache__/
+graphs/
+venv/
+dev/

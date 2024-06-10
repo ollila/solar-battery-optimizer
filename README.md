@@ -19,3 +19,19 @@ To set up program the following parameters should be considered defined for simu
 - max_charge_discharge_rate is used to define max discharge rate of battery in kW. Default is 2.5
 - start_date is used to define first day of optimization calculation
 - Last for loop in main program branch defines how many days are simulated. Default is 364
+
+**FMI solar data**
+
+Actual radiation data per location and calculated estimated production based of that.
+full list of locations available at https://en.ilmatieteenlaitos.fi/observation-stations
+please note all locations does not support readiation data
+following locations are tested to work
+- Helsinki Kumpula 101004
+- Helsinki-Vantaa 100968
+- Jokioinen 101104
+- Jyväskylä 101339
+- Parainen 100908
+- Sodankylä 101932
+- Sotkamo 101756
+- Turku Artukainen 100949
+- Utsjoki 102035
