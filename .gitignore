@@ -1,0 +1,5 @@
+venv/
+dev/
+consumption*
+.secrets.txt
+__pycache__/
