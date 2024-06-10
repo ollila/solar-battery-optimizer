@@ -5,6 +5,8 @@ import pytz
 import time
 import random
 
+# Functions for fmi_main
+
 def fetch_location_data(location_id):
     location_name = "Unknown_Location"
     latitude = "Unknown"

@@ -1,6 +1,7 @@
 import math
 import numpy as np
 
+# Functions for fmi_main
 # Constants
 SOLAR_CONSTANT = 1367  # W/m^2
 
