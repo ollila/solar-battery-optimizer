@@ -14,15 +14,21 @@ from fmi_pvwatts import (
 )
 
 # Define Main Variables
+
 start_date = '2024-05-06'  # Given in date without time
 days_to_count = 42  # Collect details ahead from start date, max 42 days at the time 
 location = 100949  # Location ID to fetch data available in FMI
 pv_total_kwp = 10  # PV system total kW peak
-tilt_angle = 30  # Tilt angle for PV modules
-azimuth_degree = 205  # Azimuth degree for PV modules
+tilt_angle = 30  # Tilt angle of PV modules
+azimuth_degree = 205  # Azimuth degree of PV modules
+
+
+## default parameters - no need to modify ##
 inverter_efficiency = 0.96  # Typical inverter efficiency, no need to change
 temp_coefficient = -0.0035 # no need to change
 standard_meridian = 30  # in Finland no need to change
+
+## code section begin ##
 
 # Fetch geo-coordinates and radiation & weather data
 location_name, latitude, longitude = fetch_location_data(location)
