@@ -10,8 +10,8 @@ from datetime import datetime, time
 ## instruction to use
 ## activate venv -> source venv/bin/activate
 ## deactivate venv -> deactivate
-## https://oma.datahub.fi/#/ consumption data
-## PV production estimate fmi_main.py estimated PV production
+## https://oma.datahub.fi/#/ consumption data # pull from omaCaruna WIP
+## PV production estimate fmi_main.py estimate PV production by nearest FMI location
 
 
 # Start date
@@ -36,7 +36,7 @@ night_time_distribution_end = "06:59"  # Example value, replace with your actual
 max_value = 100  # Example maximum value, replace with your actual max value
 min_value = -100  # Example maximum value, replace with your actual max value
 ticks = 10 # Example tick value, replace with your actual tick value
-flex_load = 10 # 20 # Flexible load in percentage
+flex_load = 10 # Flexible load in percentage
 
 
 
