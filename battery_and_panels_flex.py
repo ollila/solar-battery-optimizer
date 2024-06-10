@@ -1,7 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 import pulp
-from datetime import datetime, time
+from datetime import datetime, timedelta, time
 
 ##################################################
 ###Beginning of data loading segment##############
@@ -13,15 +14,16 @@ from datetime import datetime, time
 ## https://oma.datahub.fi/#/ consumption data # pull from omaCaruna WIP
 ## PV production estimate fmi_main.py estimate PV production by nearest FMI location
 
-
-# Start date
-str_start_date = '2023-06-01' #Set start date
-days_to_count = 1 #Count dates from start date
+#Set start date
+str_start_date = '2024-03-15' 
+end_date_today = True # Set True if the end date is today 
+str_end_date = '2024-03-10' # Define the end date if end_date_today = False
 
 # Define battery parameters
 battery_capacity_kWh = 15 #Battery capacity in kWh
 max_charge_discharge_rate = 10 #Max battery discharge rate in kW
 pv_total_kwp = 10 # PV panel total
+flex_load = 10 # Flexible load in percentage
 
 distribution = 0.0507
 tax = 0.0279372
@@ -33,12 +35,15 @@ night_time_distribution_start = "22:00"  # Example value, replace with your actu
 night_time_distribution_end = "06:59"  # Example value, replace with your actual end time
 
 
-max_value = 100  # Example maximum value, replace with your actual max value
-min_value = -100  # Example maximum value, replace with your actual max value
-ticks = 10 # Example tick value, replace with your actual tick value
-flex_load = 10 # Flexible load in percentage
 
-
+actual_start_date = datetime.strptime(str_start_date, '%Y-%m-%d') - timedelta(days=1)
+start_date = actual_start_date.strftime('%Y-%m-%d')
+if end_date_today:
+    today_date = datetime.today()
+    days_to_count = (today_date - actual_start_date).days -1
+else:
+    end_date = datetime.strptime(str_end_date, '%Y-%m-%d')
+    days_to_count = (end_date - actual_start_date).days 
 
 
 # Function to load and preprocess price CSV file
@@ -104,9 +109,9 @@ consumption_df_2022 = load_and_preprocess_consumption('consumption2022.csv')
 consumption_df_2023 = load_and_preprocess_consumption('consumption2023.csv')
 consumption_df_2024 = load_and_preprocess_consumption('consumption2024.csv')
 # Load and preprocess solar data for both years with correct years passed
-solar_df_2022 = load_and_preprocess_solar('pvwatts.csv', 2022)
-solar_df_2023 = load_and_preprocess_solar('pvwatts.csv', 2023)
-solar_df_2024 = load_and_preprocess_solar('pvwatts.csv', 2024)
+solar_df_2022 = load_and_preprocess_solar('pvwatts2022.csv', 2022)
+solar_df_2023 = load_and_preprocess_solar('pvwatts2023.csv', 2023)
+solar_df_2024 = load_and_preprocess_solar('pvwatts2024.csv', 2024)
 
 
 # Concatenate the DataFrames
@@ -598,13 +603,29 @@ plt.title(f"Cumulative Profits and Revenues Over Time,\nPV power {pv_total_kwp:.
 plt.legend()
 plt.xticks(rotation=45)
 
-#max_value = 1200  # Example maximum value, replace with your actual max value
-#min_value = -700  # Example maximum value, replace with your actual max value
-#ticks = 100 # Example tick value, replace with your actual tick value
+# dynamic grid size
+highest_value = max(cumulative_hourly_cost, max(cumulative_hourly_costs_list), cumulative_solar_to_grid, cumulative_profit, cumulative_revenue_within, cumulative_revenue_excess, cumulative_charging_costs)
+max_value = math.ceil(highest_value / 100) * 100 
+smallest_value = min(cumulative_hourly_costs_list)
+min_value = math.floor(smallest_value / 100) * 100 
+
+# Define ticks based on rounded_highest_value
+if max_value <= 100:
+    ticks = 10
+elif max_value <= 250:
+    ticks = 20
+elif max_value <= 1000:
+    ticks = 50
+elif max_value <= 2000:
+    ticks = 100
+elif max_value <= 3000:
+    ticks = 200
+else:
+    ticks = 250
 
 
 plt.ylim(bottom=min_value)  # Set the minimum value of the y-axis
-y_ticks = range(min_value, max_value + 100, ticks)  # Generates ticks from min_value to max_value with a step of 200€
+y_ticks = range(min_value, max_value, ticks)  # Generates ticks from min_value to max_value 
 
 # Set the y-ticks
 plt.yticks(y_ticks)
