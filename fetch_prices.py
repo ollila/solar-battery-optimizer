@@ -4,29 +4,25 @@ from datetime import datetime, timedelta, timezone
 import xml.etree.ElementTree as ET
 import configparser
 
-# create .secrets file and add following lines to it
-# [entsoe]
-# API_KEY = your_api_key
+# rename .secrets-example.txt to .secrets.txt file and add your entso-e API key to it
 
 # Read API key from .secrets file
 config = configparser.ConfigParser()
-config.read('.secrets')
+config.read('.secrets.txt')
 API_KEY = config['entsoe']['api_key']
 ENTSOE_API_URL = 'https://web-api.tp.entsoe.eu/api'
-START_DATE= 20240101
+START_DATE= 20240101 # start date to fetch prices
 
 # Set periodStart to the beginning of the year
 start_date_obj = datetime.strptime(str(START_DATE), '%Y%m%d')
 previous_day = start_date_obj - timedelta(days=1)
 period_start = previous_day.strftime('%Y%m%d') + '2200'
-#period_start = start_date_obj.strftime('%Y%m%d') + '2200'
 
 # Get the current date and end of tomorrow's date
 today = datetime.now(timezone.utc)
 tomorrow = today + timedelta(days=1)
 end_of_tomorrow = tomorrow + timedelta(days=1)
 period_end = end_of_tomorrow.strftime('%Y%m%d0000')
-#period_end = 202501010000
 
 # Define the parameters for the API request
 params = {
