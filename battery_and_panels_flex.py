@@ -1,10 +1,50 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 import pulp
+from datetime import datetime, timedelta, time
 
 ##################################################
 ###Beginning of data loading segment##############
 ##################################################
+
+## instruction to use
+## activate venv -> source venv/bin/activate
+## deactivate venv -> deactivate
+## https://oma.datahub.fi/#/ consumption data # pull from omaCaruna WIP
+## PV production estimate fmi_main.py estimate PV production by nearest FMI location
+
+#Set start date
+str_start_date = '2024-03-15' 
+end_date_today = True # Set True if the end date is today 
+str_end_date = '2024-03-10' # Define the end date if end_date_today = False
+
+# Define battery parameters
+battery_capacity_kWh = 15 #Battery capacity in kWh
+max_charge_discharge_rate = 10 #Max battery discharge rate in kW
+pv_total_kwp = 10 # PV panel total
+flex_load = 10 # Flexible load in percentage
+
+distribution = 0.0507
+tax = 0.0279372
+margin = 0.0045
+night_time_distribution = False  # DONT USE, under development - set true if night-time distribution fee is in use
+distribution_fee = 0.0492  # Example value, replace with your actual daytime or single distribution fee
+night_time_distribution_fee = 0.0301  # Example value, replace with your actual night-time dostribution fee value
+night_time_distribution_start = "22:00"  # Example value, replace with your actual start time
+night_time_distribution_end = "06:59"  # Example value, replace with your actual end time
+
+
+
+actual_start_date = datetime.strptime(str_start_date, '%Y-%m-%d') - timedelta(days=1)
+start_date = actual_start_date.strftime('%Y-%m-%d')
+if end_date_today:
+    today_date = datetime.today()
+    days_to_count = (today_date - actual_start_date).days -1
+else:
+    end_date = datetime.strptime(str_end_date, '%Y-%m-%d')
+    days_to_count = (end_date - actual_start_date).days 
+
 
 # Function to load and preprocess price CSV file
 def load_and_preprocess_prices(file_path):
@@ -36,7 +76,7 @@ def load_and_preprocess_solar(file_path, year):
     df_solar = pd.read_csv(file_path)
     
     # Construct a datetime index from the Month, Day, Hour columns with the correct year
-    df_solar['Timestamp'] = pd.to_datetime(df_solar[['Month', 'Day']].assign(Year=year), errors='coerce') + pd.to_timedelta(df_solar['Hour'], unit='H')
+    df_solar['Timestamp'] = pd.to_datetime(df_solar[['Month', 'Day']].assign(Year=year), errors='coerce') + pd.to_timedelta(df_solar['Hour'], unit='h')
     
     # Localize the Timestamp to Finland's timezone without considering daylight saving time initially
     # Adjust the localization to handle DST if necessary, depending on your analysis needs
@@ -64,22 +104,38 @@ def load_and_preprocess_solar(file_path, year):
 # Load and preprocess the data for both years
 price_df_2022 = load_and_preprocess_prices('price2022.csv')
 price_df_2023 = load_and_preprocess_prices('price2023.csv')
+price_df_2024 = load_and_preprocess_prices('price2024.csv')
 consumption_df_2022 = load_and_preprocess_consumption('consumption2022.csv')
 consumption_df_2023 = load_and_preprocess_consumption('consumption2023.csv')
+consumption_df_2024 = load_and_preprocess_consumption('consumption2024.csv')
 # Load and preprocess solar data for both years with correct years passed
 solar_df_2022 = load_and_preprocess_solar('pvwatts2022.csv', 2022)
 solar_df_2023 = load_and_preprocess_solar('pvwatts2023.csv', 2023)
+solar_df_2024 = load_and_preprocess_solar('pvwatts2024.csv', 2024)
+
 
 # Concatenate the DataFrames
-df_combined_prices = pd.concat([price_df_2022, price_df_2023])
-df_combined_consumption = pd.concat([consumption_df_2022, consumption_df_2023])
-df_combined_solar = pd.concat([solar_df_2022, solar_df_2023])
+df_combined_prices = pd.concat([price_df_2022, price_df_2023, price_df_2024])
+df_combined_consumption = pd.concat([consumption_df_2022, consumption_df_2023, consumption_df_2024])
+df_combined_solar = pd.concat([solar_df_2022, solar_df_2023, solar_df_2024])
 
 # Merge price and consumption data on index (timestamp)
 df_merged = pd.merge(df_combined_prices, df_combined_consumption, left_index=True, right_index=True, how='inner')
 
 # Ensure this calculation is performed to add 'Total Price [EUR/kWh]' to df_merged
-df_merged['Total Price [EUR/kWh]'] = (df_merged["Day-ahead Price [EUR/kWh]"] * 1.24) + 0.064
+# df_merged['Total Price [EUR/kWh]'] = (df_merged["Day-ahead Price [EUR/kWh]"] * 1.24) + distribution_fee + tax + margin
+if night_time_distribution:
+    # Convert start and end times to datetime objects
+    start_time = datetime.strptime(night_time_distribution_start, "%H:%M")
+    end_time = datetime.strptime(night_time_distribution_end, "%H:%M")
+
+    # Calculate price based on time of day
+    df_merged['Total Price [EUR/kWh]'] = (df_merged["Day-ahead Price [EUR/kWh]"] * 1.24) + \
+                                          df_merged.apply(lambda row: night_time_distribution_fee if start_time <= row['Time'] <= end_time else distribution_fee, axis=1) + \
+                                          tax + margin
+else:
+    df_merged['Total Price [EUR/kWh]'] = (df_merged["Day-ahead Price [EUR/kWh]"] * 1.24) + distribution_fee + tax + margin
+
 
 # Calculate 'Hourly Cost [EUR]' based on the 'Total Price [EUR/kWh]' and 'Consumption'
 df_merged['Hourly Cost [EUR]'] = df_merged['Total Price [EUR/kWh]'] * df_merged['Consumption']
@@ -125,7 +181,7 @@ def optimize_with_flexibility(df_segment, battery_capacity_kWh, max_charge_disch
 
 
 
-    flex_load_percentage = 0.0 #Share of fully flexible load
+    flex_load_percentage = flex_load/100 #0.2 #Share of fully flexible load
 
     # Initialize problem
     problem = pulp.LpProblem("Daily_Cost_Minimization_with_Flexibility", pulp.LpMinimize)
@@ -303,15 +359,16 @@ def optimize_with_flexibility(df_segment, battery_capacity_kWh, max_charge_disch
 
 
 # Define battery parameters
-battery_capacity_kWh = 5 #Battery capacity in kWh
-max_charge_discharge_rate = 2.5 #Max battery discharge rate in kW
-
+#battery_capacity_kWh = 90 #Battery capacity in kWh
+#max_charge_discharge_rate = 15 #Max battery discharge rate in kW
+#pv_total_kwp = 15 # PV panel total
 
 # Initialize the start date and time for the first segment
-start_date = pd.to_datetime('2023-01-01').tz_localize('UTC')  #Define start date for calculation
+start_date = pd.to_datetime(str_start_date).tz_localize('UTC')
+#start_date = pd.to_datetime('2023-04-01').tz_localize('UTC')  #Define start date for calculation
 cumulative_total_profit = 0  # Initialize cumulative profit
 profits_first_24_hours = []  # Initialize list to store profits for the first 24 hours of each segment
-initial_SoC = 0 # Starting SoC, adjust based on your actual starting conditions
+initial_SoC = 20 # Starting SoC, adjust based on your actual starting conditions
 day_total_energy = 0
 consumed_before_14 = 0 
 battery_discharging_hours = 0
@@ -343,7 +400,7 @@ cumulative_hourly_cost = 0
 ##################################################
 #For loop defines how many days is going to be iterated
 
-for i in range(364):
+for i in range(days_to_count): # default 364
     datetime_format = '%Y-%m-%d %H:%M:%S+00:00'  # Adjust format as needed
 
     # Define segment start and end times
@@ -530,7 +587,7 @@ print(f"Battery Discharging Hours in the first 24 hours: {battery_discharging_ho
 print(f"Battery Charging Hours in the first 24 hours: {battery_charging_hours}")
 
 # Plotting with y-axis minimum set to 0
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(13, 7))
 plt.plot(segment_dates, cumulative_profits, label='Cumulative Profit')
 #plt.plot(segment_dates, cumulative_revenues_within, label='Cumulative Revenue Own Use')
 plt.plot(segment_dates, cumulative_revenues_excess, label='Cumulative Revenue Exceses')
@@ -541,13 +598,34 @@ plt.plot(segment_dates, cumulative_hourly_costs_list, label='Cumulative Costs', 
 
 plt.xlabel('Date')
 plt.ylabel('EUR')
-plt.title('Cumulative Profits and Revenues Over Time')
+#plt.title('Cumulative Profits and Revenues Over Time')
+plt.title(f"Cumulative Profits and Revenues Over Time,\nPV power {pv_total_kwp:.2f} kWp, Batt {battery_capacity_kWh:.2f} kWh, max dis/chrg rate {int(max_charge_discharge_rate):.2f} kW")
 plt.legend()
 plt.xticks(rotation=45)
-plt.ylim(bottom=0)  # Set the minimum value of the y-axis to 0
-max_value = 2400  # Example maximum value, replace with your actual max value
 
-y_ticks = range(0, max_value + 200, 200)  # Generates ticks from 0 to max_value with a step of 200€
+# dynamic grid size
+highest_value = max(cumulative_hourly_cost, max(cumulative_hourly_costs_list), cumulative_solar_to_grid, cumulative_profit, cumulative_revenue_within, cumulative_revenue_excess, cumulative_charging_costs)
+max_value = math.ceil(highest_value / 100) * 100 
+smallest_value = min(cumulative_hourly_costs_list)
+min_value = math.floor(smallest_value / 100) * 100 
+
+# Define ticks based on rounded_highest_value
+if max_value <= 100:
+    ticks = 10
+elif max_value <= 250:
+    ticks = 20
+elif max_value <= 1000:
+    ticks = 50
+elif max_value <= 2000:
+    ticks = 100
+elif max_value <= 3000:
+    ticks = 200
+else:
+    ticks = 250
+
+
+plt.ylim(bottom=min_value)  # Set the minimum value of the y-axis
+y_ticks = range(min_value, max_value, ticks)  # Generates ticks from min_value to max_value 
 
 # Set the y-ticks
 plt.yticks(y_ticks)
@@ -558,5 +636,6 @@ plt.grid(axis='y')
 plt.tight_layout()
 #plt.show()
 # Save the plot as an image file
-plot_filename = "cumulative_profits_over_time.png"
+# plot_filename = "cumulative_profits_over_time.png"
+plot_filename = f"cumulative_profits_{str_start_date}_pv_{pv_total_kwp}kWp_batt_{battery_capacity_kWh}kWh.png"
 plt.savefig(plot_filename)

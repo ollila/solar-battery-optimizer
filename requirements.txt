@@ -8,3 +8,10 @@ pip
 pulp
 configparser
 lxml
+fmiopendata
+csv
+math
+datetime
+random
+numpy
+pytz

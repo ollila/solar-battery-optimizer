@@ -14,9 +14,9 @@ from collections import defaultdict
 def parse_consumption(consumption_str):
     return float(consumption_str.replace(',', '.'))
 
-# Your input and output file paths
-input_file_path = 'fingrid_input.csv'
-output_file_path = 'fingrid_output.csv'
+# Your input and output file paths 
+input_file_path = 'consumption.csv' # datahub default filename
+output_file_path = 'consumption2024.csv' # Current year
 
 # Dictionary to hold aggregated consumption values, keyed by timestamp
 aggregated_data = defaultdict(float)
